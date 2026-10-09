@@ -1,0 +1,296 @@
+{
+    "name": "Bill Scanner (Expo + AI + Google Sheets)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "scan-bill",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "996b538c-7d89-4d25-9290-28df8c1a1534",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                -448,
+                0
+            ],
+            "webhookId": "5f1c2b7e-9d3a-4c1e-8b2f-6a7d9e0c1b23"
+        },
+        {
+            "parameters": {
+                "operation": "toBinary",
+                "sourceProperty": "body.image",
+                "options": {
+                    "fileName": "bill.jpg",
+                    "mimeType": "image/jpeg"
+                }
+            },
+            "id": "dc5fe9c5-707e-47ab-8927-b865eb03fc45",
+            "name": "Convert to File",
+            "type": "n8n-nodes-base.convertToFile",
+            "typeVersion": 1.1,
+            "position": [
+                -224,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "You are an accountant reading a bill from Nepal. Extract the details from the attached image.\nBills may be printed or handwritten, in English or Nepali, and may use Nepali digits (१, २, ३). Convert all numbers to English digits.\nKeep the date exactly as written on the bill (it may be in Bikram Sambat, e.g. 2083-06-21).\nIf something is not visible, use an empty string or 0.",
+                "hasOutputParser": true,
+                "messages": {
+                    "messageValues": [
+                        {
+                            "type": "HumanMessagePromptTemplate",
+                            "messageType": "imageBinary"
+                        }
+                    ]
+                }
+            },
+            "id": "024fcf73-abef-4a5c-aee7-de9c375b6357",
+            "name": "Read Bill with AI",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.5,
+            "position": [
+                0,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "jsonSchemaExample": "{\n  \"shop_name\": \"Ram Kirana Pasal\",\n  \"bill_number\": \"1023\",\n  \"date\": \"2083-06-21\",\n  \"items\": [\n    { \"name\": \"Rice 5kg\", \"qty\": 1, \"price\": 650 },\n    { \"name\": \"Oil 1L\", \"qty\": 2, \"price\": 440 }\n  ],\n  \"total\": 1090,\n  \"payment_method\": \"Cash\"\n}"
+            },
+            "id": "9da0dbc3-2cd0-45d3-8200-4cae9c4321c6",
+            "name": "Structured Output Parser",
+            "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+            "typeVersion": 1.2,
+            "position": [
+                144,
+                240
+            ]
+        },
+        {
+            "parameters": {
+                "model": {
+                    "__rl": true,
+                    "value": "claude-haiku-4-5-20251001",
+                    "mode": "id"
+                },
+                "options": {}
+            },
+            "id": "4cbc4929-1b96-4d02-9cea-065deb172cb9",
+            "name": "Anthropic Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+            "typeVersion": 1.6,
+            "position": [
+                16,
+                240
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "append",
+                "documentId": {
+                    "__rl": true,
+                    "value": "",
+                    "mode": "list"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "",
+                    "mode": "list"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "Scanned At": "={{ $now.setZone('Asia/Kathmandu').toFormat('yyyy-MM-dd HH:mm') }}",
+                        "Shop": "={{ $json.output.shop_name }}",
+                        "Bill No": "={{ $json.output.bill_number }}",
+                        "Bill Date": "={{ $json.output.date }}",
+                        "Items": "={{ $json.output.items.map(i => i.name + ' x' + i.qty + ' = Rs.' + i.price).join(', ') }}",
+                        "Total": "={{ $json.output.total }}",
+                        "Payment": "={{ $json.output.payment_method }}"
+                    },
+                    "matchingColumns": [],
+                    "schema": [
+                        {
+                            "id": "Scanned At",
+                            "displayName": "Scanned At",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Shop",
+                            "displayName": "Shop",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Bill No",
+                            "displayName": "Bill No",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Bill Date",
+                            "displayName": "Bill Date",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Items",
+                            "displayName": "Items",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Total",
+                            "displayName": "Total",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Payment",
+                            "displayName": "Payment",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        }
+                    ],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": false
+                },
+                "options": {
+                    "cellFormat": "USER_ENTERED"
+                }
+            },
+            "id": "c6c00da1-d374-491e-9179-1d61ada5f0c0",
+            "name": "Save to Google Sheets",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.5,
+            "position": [
+                352,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ $('Read Bill with AI').item.json.output }}",
+                "options": {}
+            },
+            "id": "97e4a3f4-1d4b-4a7b-bb5d-06182facaed1",
+            "name": "Respond to App",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                576,
+                0
+            ]
+        }
+    ],
+    "pinData": {},
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Convert to File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Convert to File": {
+            "main": [
+                [
+                    {
+                        "node": "Read Bill with AI",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Anthropic Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Read Bill with AI",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Structured Output Parser": {
+            "ai_outputParser": [
+                [
+                    {
+                        "node": "Read Bill with AI",
+                        "type": "ai_outputParser",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Read Bill with AI": {
+            "main": [
+                [
+                    {
+                        "node": "Save to Google Sheets",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save to Google Sheets": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to App",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "tags": []
+}
